@@ -1,0 +1,535 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dog Glasses Studio</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  background: linear-gradient(135deg, #ffe0ee, #e3d9ff);
+  min-height: 100vh;
+  color: #442b57;
+  text-align: center;
+}
+
+header {
+  padding: 30px 15px 15px;
+}
+
+h1 {
+  font-size: clamp(30px, 6vw, 52px);
+  margin: 0;
+}
+
+.credit {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ed4393;
+  margin: 15px 0;
+}
+
+.subtitle {
+  font-size: 16px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+.studio {
+  background: white;
+  padding: 20px;
+  border-radius: 25px;
+  box-shadow: 0 12px 35px #8d5d9b30;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 650px;
+  margin: 20px auto;
+  border-radius: 18px;
+  background: #fff0f7;
+  touch-action: none;
+  cursor: grab;
+}
+
+canvas:active {
+  cursor: grabbing;
+}
+
+button, .upload {
+  background: #f45aab;
+  border: none;
+  border-radius: 30px;
+  padding: 13px 22px;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .2s;
+}
+
+button:hover, .upload:hover {
+  background: #d93891;
+  transform: translateY(-2px);
+}
+
+.upload {
+  display: inline-block;
+  margin: 10px;
+}
+
+input[type=file] {
+  display: none;
+}
+
+.glasses {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.glass-btn {
+  background: #f5e8ff;
+  color: #4b315d;
+  border: 3px solid transparent;
+  border-radius: 15px;
+  font-size: 32px;
+  padding: 15px 5px;
+}
+
+.glass-btn:hover {
+  background: #efd5ff;
+}
+
+.glass-btn.active {
+  border-color: #f45aab;
+  background: #ffe3f2;
+}
+
+.controls {
+  display: grid;
+  gap: 12px;
+  max-width: 450px;
+  margin: 20px auto;
+  text-align: left;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.control label {
+  min-width: 85px;
+}
+
+input[type=range] {
+  width: 100%;
+  accent-color: #ef4ba1;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+footer {
+  padding: 25px;
+  color: #805c90;
+}
+
+@media(max-width:500px) {
+  .glasses {
+    grid-template-columns: repeat(2,1fr);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🐶 Dog Glasses Studio 🐶</h1>
+  <div class="credit">Idea by Wilma Elmersson</div>
+  <p class="subtitle">
+    Give your dog the coolest glasses ever!
+  </p>
+</header>
+
+<div class="container">
+  <div class="studio">
+
+    <h2>Choose your dog!</h2>
+
+    <label class="upload">
+      📷 Upload Dog Photo
+      <input type="file" id="photo" accept="image/*">
+    </label>
+
+    <canvas id="canvas" width="650" height="500"></canvas>
+
+    <p>Drag the glasses onto your dog's face!</p>
+
+    <h2>Choose Glasses</h2>
+
+    <div class="glasses">
+      <button class="glass-btn active" data-type="sun">🕶️</button>
+      <button class="glass-btn" data-type="cool">😎</button>
+      <button class="glass-btn" data-type="nerd">🤓</button>
+      <button class="glass-btn" data-type="heart">💗</button>
+      <button class="glass-btn" data-type="star">⭐</button>
+      <button class="glass-btn" data-type="round">👓</button>
+      <button class="glass-btn" data-type="party">🥳</button>
+      <button class="glass-btn" data-type="none">❌</button>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <label>Size</label>
+        <input type="range" id="size" min="50" max="350" value="200">
+      </div>
+
+      <div class="control">
+        <label>Rotation</label>
+        <input type="range" id="rotation" min="-60" max="60" value="0">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="reset">↺ Reset Glasses</button>
+      <button id="download">⬇ Download Photo</button>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  Made with 🐾 | Idea by Wilma Elmersson
+</footer>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const photoInput = document.getElementById("photo");
+const sizeInput = document.getElementById("size");
+const rotationInput = document.getElementById("rotation");
+
+let dogImage = null;
+let glassesType = "sun";
+let glassesX = 325;
+let glassesY = 250;
+let glassesSize = 200;
+let rotation = 0;
+let dragging = false;
+
+function drawBackground() {
+  ctx.fillStyle = "#fff0f7";
+  ctx.fillRect(0, 0, 650, 500);
+
+  ctx.fillStyle = "#d69dc4";
+  ctx.textAlign = "center";
+  ctx.font = "bold 28px Arial";
+  ctx.fillText("Upload your dog photo 🐶", 325, 220);
+  ctx.font = "18px Arial";
+  ctx.fillText("Then try on some glasses!", 325, 260);
+}
+
+function drawDog() {
+  if (!dogImage) {
+    drawBackground();
+    return;
+  }
+
+  const scale = Math.min(
+    650 / dogImage.width,
+    500 / dogImage.height
+  );
+
+  const w = dogImage.width * scale;
+  const h = dogImage.height * scale;
+
+  ctx.fillStyle = "#fff0f7";
+  ctx.fillRect(0, 0, 650, 500);
+
+  ctx.drawImage(
+    dogImage,
+    (650 - w) / 2,
+    (500 - h) / 2,
+    w,
+    h
+  );
+}
+
+function drawHeart(cx, cy, r) {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + r * 0.7);
+  ctx.bezierCurveTo(
+    cx - r * 1.7, cy - r * .25,
+    cx - r * .65, cy - r * 1.3,
+    cx, cy - r * .45
+  );
+  ctx.bezierCurveTo(
+    cx + r * .65, cy - r * 1.3,
+    cx + r * 1.7, cy - r * .25,
+    cx, cy + r * .7
+  );
+  ctx.closePath();
+}
+
+function drawStar(cx, cy, outer, inner) {
+  ctx.beginPath();
+
+  for (let i = 0; i < 10; i++) {
+    const angle = i * Math.PI / 5 - Math.PI / 2;
+    const radius = i % 2 === 0 ? outer : inner;
+
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  ctx.closePath();
+}
+
+function drawGlasses() {
+  if (glassesType === "none") return;
+
+  ctx.save();
+  ctx.translate(glassesX, glassesY);
+  ctx.rotate(rotation * Math.PI / 180);
+
+  const s = glassesSize / 200;
+  ctx.scale(s, s);
+
+  const colors = {
+    sun: ["#151515", "#333333"],
+    cool: ["#121212", "#304e68"],
+    nerd: ["#282828", "#ffffff33"],
+    heart: ["#ff318e", "#ff91c1"],
+    star: ["#f6a500", "#ffe066"],
+    round: ["#a66c38", "#b6eaff66"],
+    party: ["#a02bd1", "#ff8ff2"]
+  };
+
+  const [frame, lens] = colors[glassesType];
+
+  ctx.lineWidth = 8;
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = frame;
+  ctx.fillStyle = lens;
+
+  if (glassesType === "heart") {
+    drawHeart(-55, 0, 43);
+    ctx.fill();
+    ctx.stroke();
+
+    drawHeart(55, 0, 43);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  else if (glassesType === "star") {
+    drawStar(-55, 0, 48, 24);
+    ctx.fill();
+    ctx.stroke();
+
+    drawStar(55, 0, 48, 24);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  else if (
+    glassesType === "round" ||
+    glassesType === "nerd"
+  ) {
+    for (const x of [-55, 55]) {
+      ctx.beginPath();
+      ctx.arc(x, 0, 44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  else {
+    for (const x of [-55, 55]) {
+      ctx.beginPath();
+      ctx.roundRect(x - 48, -35, 96, 70, 18);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  // Bridge
+  ctx.beginPath();
+  ctx.moveTo(-10, -8);
+  ctx.quadraticCurveTo(0, -22, 10, -8);
+  ctx.stroke();
+
+  // Side arms
+  ctx.beginPath();
+  ctx.moveTo(-103, -12);
+  ctx.lineTo(-125, -23);
+  ctx.moveTo(103, -12);
+  ctx.lineTo(125, -23);
+  ctx.stroke();
+
+  // Lens highlights
+  if (glassesType !== "nerd") {
+    ctx.strokeStyle = "#ffffff66";
+    ctx.lineWidth = 4;
+
+    for (const x of [-55, 55]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 23, -18);
+      ctx.lineTo(x - 8, -25);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function draw() {
+  drawDog();
+  drawGlasses();
+}
+
+photoInput.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+
+  img.onload = () => {
+    dogImage = img;
+    URL.revokeObjectURL(url);
+    draw();
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    alert("Could not open that image.");
+  };
+
+  img.src = url;
+});
+
+document.querySelectorAll(".glass-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".glass-btn").forEach(b => {
+      b.classList.remove("active");
+    });
+
+    btn.classList.add("active");
+    glassesType = btn.dataset.type;
+    draw();
+  });
+});
+
+sizeInput.addEventListener("input", () => {
+  glassesSize = Number(sizeInput.value);
+  draw();
+});
+
+rotationInput.addEventListener("input", () => {
+  rotation = Number(rotationInput.value);
+  draw();
+});
+
+function getPointer(e) {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: (e.clientX - rect.left) * canvas.width / rect.width,
+    y: (e.clientY - rect.top) * canvas.height / rect.height
+  };
+}
+
+let offsetX = 0;
+let offsetY = 0;
+
+canvas.addEventListener("pointerdown", e => {
+  if (glassesType === "none") return;
+
+  const p = getPointer(e);
+
+  if (
+    Math.abs(p.x - glassesX) < glassesSize * .7 &&
+    Math.abs(p.y - glassesY) < glassesSize * .5
+  ) {
+    dragging = true;
+    offsetX = p.x - glassesX;
+    offsetY = p.y - glassesY;
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!dragging) return;
+
+  const p = getPointer(e);
+
+  glassesX = p.x - offsetX;
+  glassesY = p.y - offsetY;
+
+  draw();
+});
+
+canvas.addEventListener("pointerup", () => {
+  dragging = false;
+});
+
+canvas.addEventListener("pointercancel", () => {
+  dragging = false;
+});
+
+document.getElementById("reset").onclick = () => {
+  glassesX = 325;
+  glassesY = 250;
+  glassesSize = 200;
+  rotation = 0;
+
+  sizeInput.value = 200;
+  rotationInput.value = 0;
+
+  draw();
+};
+
+document.getElementById("download").onclick = () => {
+  if (!dogImage) {
+    alert("Please upload a dog photo first!");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.download = "wilma-dog-glasses.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+};
+
+draw();
+</script>
+
+</body>
+</html>
